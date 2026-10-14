@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+frontend/dist/
+backend/public/hot
+backend/public/storage
+
+# Laravel runtime
+backend/storage/*.key
+backend/storage/app/demo-prefs-backup.json
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/storage/logs/
+backend/.env
+backend/.env.backup
+
+# Uploaded media (regenerated at runtime, not source)
+backend/storage/app/public/avatars/
+backend/storage/app/public/chat/
+
+# Demo video pipeline — raw captures and renders are large binaries, and
+# re-running `npm run all` in demo/ regenerates them from the storyboards.
+demo/raw/
+demo/out/
+demo/frames/
+
+# Playwright driver output
+.claude/skills/run-smartpass/screenshots/
+
+# Python
+__pycache__/
+*.pyc
+voice_service/__pycache__/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Environment files — unanchored so they match at ANY depth (the nested
+# SmartPass/ copy has its own backend/.env, and .env.backup-lan did not
+# match the older, more specific rules above).
+.env
+.env.*
+!.env.example
+
+# Local editor/agent tooling, not part of the project source.
+.claude/
+
+# Stale nested copy of an earlier build — it is its own git repo
+# (remote: SmartPass---Buid) and would otherwise commit as a broken
+# submodule gitlink pointing at a commit this repo does not contain.
+/SmartPass/

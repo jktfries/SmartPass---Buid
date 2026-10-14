@@ -1,0 +1,17 @@
+# Let git normalise text, but never let it touch these — line-ending
+# conversion on a binary silently corrupts it.
+*.docx  binary
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.mp4   binary
+*.webm  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+
+# Windows launcher needs CRLF to run.
+*.bat   text eol=crlf

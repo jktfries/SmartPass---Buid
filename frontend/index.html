@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartPass — Student Attendance Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Apply the saved appearance before React mounts, otherwise the server copy
+         arrives a round-trip after first paint and the theme visibly snaps in. -->
+    <script>
+      (function () {
+        var el = document.documentElement
+        var p = {}
+        try { p = JSON.parse(localStorage.getItem('sp-prefs') || '{}') } catch (e) {}
+
+        // Fall back to the legacy key so anyone who set dark before this existed
+        // doesn't get a white flash on their first load after the update.
+        var theme = p.theme || (localStorage.getItem('sp-dark') === 'true' ? 'dark' : 'system')
+        var dark = theme === 'dark' ||
+          (theme === 'system' && window.matchMedia &&
+           window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) el.classList.add('dark')
+
+        // A custom accent is a hex; presets are names. Must branch the same way
+        // ThemeContext does, or a custom colour flashes teal before React mounts.
+        if (p.accent && p.accent.charAt(0) === '#') {
+          el.style.setProperty('--sp-primary', p.accent)
+          el.setAttribute('data-accent', 'custom')
+          // Cheap luminance check, kept in sync with onColorFor() in
+          // ThemeContext — this runs before any module loads, so it can't import.
+          var h = p.accent.replace('#', '')
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+          if (/^[0-9a-fA-F]{6}$/.test(h)) {
+            var lin = function (v) {
+              var s = parseInt(v, 16) / 255
+              return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+            }
+            var lum = 0.2126 * lin(h.slice(0, 2)) + 0.7152 * lin(h.slice(2, 4)) + 0.0722 * lin(h.slice(4, 6))
+            el.style.setProperty('--sp-on-primary', lum > 0.45 ? '#14212e' : '#ffffff')
+          }
+        } else if (p.accent && p.accent !== 'teal') {
+          el.classList.add('accent-' + p.accent)
+        }
+        el.setAttribute('data-density', p.density || 'comfortable')
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

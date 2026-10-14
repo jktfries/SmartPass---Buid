@@ -1,0 +1,16 @@
+{
+  "name": "smartpass-demo",
+  "private": true,
+  "type": "module",
+  "description": "Scripted Playwright walkthrough of each SmartPass role, rendered to video.",
+  "scripts": {
+    "record": "node record.mjs --all",
+    "build": "node build.mjs",
+    "prepare:before": "node prepare.mjs before",
+    "prepare:after": "node prepare.mjs after",
+    "all": "node prepare.mjs before && node record.mjs --all && node build.mjs && node prepare.mjs after"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}

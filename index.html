@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPass Wellness - Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #0a0a0a;
+            background-image:
+                radial-gradient(at 20% 30%, rgba(88, 28, 135, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 70%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
+        }
+
+        .glass-card {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .neuro-button {
+            background: linear-gradient(145deg, #1a1a1a, #141414);
+            box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.8), -8px -8px 16px rgba(40, 40, 40, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .neuro-button:hover:not(:disabled) {
+            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9), -4px -4px 8px rgba(50, 50, 50, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .feeling-card {
+            background: rgba(15, 15, 15, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feeling-card:hover {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(20, 20, 20, 0.9);
+            transform: translateY(-2px);
+        }
+
+        .feeling-card.selected {
+            border: 1px solid rgba(139, 92, 246, 0.6);
+            background: rgba(139, 92, 246, 0.1);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .glow {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+        }
+
+        .video-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.2);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .recording-indicator {
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 40px;
+        }
+
+        .waveform-bar {
+            width: 4px;
+            background: linear-gradient(to top, #8b5cf6, #a78bfa);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 0.3s;
+        }
+    </style>
+</head>
+
+<header class="text-left mb-8">
+    <a href="SmartPass_PROTO_build2.html" class="text-gray-400 hover:text-white text-sm underline">
+        ← Back to SmartPass
+    </a>
+</header>
+
+
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-5xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold mb-3">
+                <span
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SmartPass</span>
+                <span class="text-white"> Wellness (Beta) </span>
+            </h1>
+            <p class="text-gray-400 text-sm">Multi-Modal Emotional Analysis by Joco </p>
+            <p id="statusMessage" class="text-gray-500 text-xs mt-2">Loading AI models...</p>
+        </div>
+
+        <!-- Messages -->
+        <div id="messageBox" class="hidden glass-card rounded-2xl p-4 mb-6 border">
+            <div class="flex items-center gap-3">
+                <svg id="messageIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="messageText" class="text-sm"></span>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="glass-card rounded-3xl p-10">
+
+            <!-- Initial State -->
+            <div id="initialState" class="text-center">
+                <div class="w-32 h-32 mx-auto mb-8 neuro-button rounded-full flex items-center justify-center">
+                    <svg class="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-semibold text-white mb-4">Enhanced Wellness Check</h2>
+                <p class="text-gray-400 mb-4 max-w-lg mx-auto">
+                    Tsystem combines facial micro-expressions and voice analysis for authentic emotional
+                    assessment.
+                </p>
+                <div class="flex items-center justify-center gap-6 mb-10 text-gray-500 text-sm">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <span>Facial Analysis</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z">
+                            </path>
+                        </svg>
+                        <span>Voice Analysis</span>
+                    </div>
+                </div>
+                <button id="startButton" onclick="startAnalysis()" disabled
+                    class="neuro-button text-white px-10 py-5 rounded-2xl font-medium text-lg inline-flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="startButtonText">Loading AI Models...</span>
+                </button>
+            </div>
+
+            <!-- Phase 1: Facial Analysis -->
+            <div id="facialPhase" class="hidden text-center">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">
+                            1</div>
+                        <h3 class="text-2xl font-semibold text-white">Facial Expression Analysis</h3>
+                    </div>
+                    <p class="text-gray-400 text-sm">Analyzing micro-expressions and facial patterns...</p>
+                </div>
+
+                <div class="relative inline-block mb-6">
+                    <video id="video" autoplay playsinline muted
+                        class="w-full max-w-2xl h-96 rounded-2xl object-cover video-container"></video>
+
+                    <!-- Progress Ring -->
+                    <div class="absolute top-4 right-4">
+                        <svg class="progress-ring" width="60" height="60">
+                            <circle class="progress-ring-circle" stroke="rgba(139, 92, 246, 0.3)" stroke-width="4"
+                                fill="transparent" r="26" cx="30" cy="30" />
+                            <circle id="progressCircle" class="progress-ring-circle" stroke="#8b5cf6" stroke-width="4"
+                                fill="transparent" r="26" cx="30" cy="30" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="progressText" class="text-white text-sm font-bold">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Detection Indicators -->
+                    <div class="absolute bottom-4 left-4 right-4 flex justify-between items-center">
+                        <div class="flex items-center gap-2 glass-card px-3 py-2 rounded-lg">
+                            <div id="faceDetected" class="w-2 h-2 rounded-full bg-gray-600"></div>
+                            <span class="text-gray-400 text-xs">Face Detected</span>
+                        </div>
+                        <div class="flex items-center gap-2 glass-card px-3 py-2 rounded-lg">
+                            <svg class="w-4 h-4 text-purple-400 animate-spin" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                            <span id="detectionCount" class="text-gray-400 text-xs">0 frames</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="skipToVoice()" class="text-gray-500 hover:text-gray-400 text-sm">Skip to voice
+                    →</button>
+            </div>
+
+            <!-- Phase 2: Voice Analysis -->
+            <div id="voicePhase" class="hidden text-center">
+                <div class="mb-8">
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                            2</div>
+                        <h3 class="text-2xl font-semibold text-white">Voice Pattern Analysis</h3>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-6">Please answer naturally - speak as you normally would with a
+                        friend</p>
+
+                    <!-- Prompt Card -->
+                    <div class="glass-card rounded-2xl p-8 mb-8 max-w-2xl mx-auto">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div
+                                class="w-12 h-12 rounded-full neuro-button flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div class="text-left flex-1">
+                                <p class="text-gray-400 text-sm mb-2">Please tell us:</p>
+                                <p id="voicePrompt" class="text-white text-xl font-medium leading-relaxed"></p>
+                            </div>
+                        </div>
+
+                        <!-- Recording Status -->
+                        <div id="recordingStatus" class="hidden">
+                            <div class="flex items-center justify-center gap-3 mb-4">
+                                <div class="recording-indicator"></div>
+                                <span class="text-red-400 text-sm font-medium">Recording...</span>
+                                <span id="recordingTime" class="text-gray-500 text-sm">0:00</span>
+                            </div>
+
+                            <!-- Waveform Visualization -->
+                            <div class="waveform justify-center mb-4" id="waveform"></div>
+
+                            <p class="text-gray-500 text-xs">Speak naturally for 5-10 seconds</p>
+                        </div>
+
+                        <!-- Start Recording Button -->
+                        <button id="recordButton" onclick="startRecording()"
+                            class="neuro-button text-white px-8 py-4 rounded-xl font-medium inline-flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z">
+                                </path>
+                            </svg>
+                            Start Recording
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="skipVoice()" class="text-gray-500 hover:text-gray-400 text-sm">Skip voice analysis
+                    →</button>
+            </div>
+
+            <!-- Analysis Phase -->
+            <div id="analysisPhase" class="hidden text-center py-16">
+                <div class="w-24 h-24 mx-auto mb-6 neuro-button rounded-full flex items-center justify-center">
+                    <svg class="w-12 h-12 text-purple-400 animate-spin" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-white mb-3">Processing Analysis...</h3>
+                <p class="text-gray-400">Cross-referencing facial and vocal patterns</p>
+            </div>
+
+            <!-- Results State -->
+            <div id="resultState" class="hidden space-y-8">
+                <!-- Multi-Modal Results -->
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <!-- Facial Analysis Card -->
+                    <div class="neuro-button rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                </path>
+                            </svg>
+                            <h4 class="text-white font-semibold">Facial Analysis</h4>
+                        </div>
+                        <div class="flex items-center gap-4 mb-3">
+                            <span id="facialEmoji" class="text-4xl"></span>
+                            <div class="flex-1">
+                                <p id="facialEmotion" class="text-white text-lg font-medium capitalize"></p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex-1 h-2 bg-black rounded-full overflow-hidden">
+                                        <div id="facialConfidenceBar"
+                                            class="h-full bg-gradient-to-r from-purple-500 to-blue-500"></div>
+                                    </div>
+                                    <span id="facialConfidence" class="text-gray-400 text-xs"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="facialNotes" class="text-gray-400 text-sm"></p>
+                    </div>
+
+                    <!-- Voice Analysis Card -->
+                    <div class="neuro-button rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z">
+                                </path>
+                            </svg>
+                            <h4 class="text-white font-semibold">Voice Analysis</h4>
+                        </div>
+                        <div class="flex items-center gap-4 mb-3">
+                            <div class="w-12 h-12 rounded-full neuro-button flex items-center justify-center">
+                                <svg id="voiceIcon" class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p id="voiceEmotion" class="text-white text-lg font-medium capitalize"></p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex-1 h-2 bg-black rounded-full overflow-hidden">
+                                        <div id="voiceConfidenceBar"
+                                            class="h-full bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+                                    </div>
+                                    <span id="voiceConfidence" class="text-gray-400 text-xs"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="voiceNotes" class="text-gray-400 text-sm"></p>
+                    </div>
+                </div>
+
+                <!-- Overall Assessment -->
+                <div id="overallCard" class="neuro-button rounded-2xl p-8 relative overflow-hidden">
+                    <div id="overallGradient" class="absolute top-0 left-0 right-0 h-1"></div>
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white mb-2">Overall Assessment</h3>
+                            <p id="overallStatus" class="text-gray-400"></p>
+                        </div>
+                        <button onclick="resetForm()" class="text-gray-400 hover:text-white transition-colors p-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="overallSummary" class="text-gray-300 leading-relaxed mb-6"></p>
+
+                    <!-- Consistency Indicator -->
+                    <div id="consistencyIndicator" class="glass-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400 text-sm">Analysis Consistency:</span>
+                            <span id="consistencyText" class="text-white font-medium"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation -->
+                <div>
+                    <label class="block text-white font-medium mb-5 text-lg">How do you really feel?</label>
+                    <div class="grid grid-cols-5 gap-4" id="feelingsGrid"></div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-white font-medium mb-4 text-lg">
+                        Additional Context <span class="text-gray-500 text-sm font-normal">(Optional)</span>
+                    </label>
+                    <textarea id="notesInput"
+                        class="w-full p-5 bg-black bg-opacity-60 border border-gray-700 rounded-2xl text-white placeholder-gray-600 resize-none focus:outline-none focus:border-purple-500"
+                        rows="4" placeholder="Share what's on your mind..."></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-4 pt-4">
+                    <button id="submitButton" onclick="handleSubmit()" disabled
+                        class="flex-1 py-5 rounded-2xl font-semibold text-lg transition-all bg-gray-800 text-gray-600 cursor-not-allowed">
+                        Submit Wellness Check
+                    </button>
+                    <button id="counselorButton" onclick="handleScheduleCounselor()"
+                        class="hidden items-center gap-3 px-8 py-5 neuro-button rounded-2xl font-medium text-purple-400 hover:text-purple-300 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        Request Counselor
+                    </button>
+                </div>
+            </div>
+
+            <!-- Success -->
+            <div id="successState" class="hidden text-center py-16">
+                <div class="w-24 h-24 mx-auto mb-6 rounded-full neuro-button flex items-center justify-center glow">
+                    <svg class="w-12 h-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-white mb-3">Enhanced Check-in Complete</h3>
+                <p class="text-gray-400">Multi-modal analysis recorded securely</p>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-xs text-gray-600">
+            <p>Multi-modal AI analysis • All data processed locally • This is in beta testing, if you are feeling differently, please book a meeting directly with your counselor.
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let selectedFeeling = '';
+        let modelsLoaded = false;
+        let facialResult = null;
+        let voiceResult = null;
+        let recordingInterval = null;
+        let recordingStartTime = 0;
+
+        const emotions = [
+            { name: 'happy', gradient: 'from-green-500 to-emerald-500', emoji: '😊' },
+            { name: 'sad', gradient: 'from-blue-500 to-cyan-500', emoji: '😢' },
+            { name: 'neutral', gradient: 'from-gray-500 to-slate-500', emoji: '😐' },
+            { name: 'angry', gradient: 'from-red-500 to-orange-500', emoji: '😠' },
+            { name: 'surprised', gradient: 'from-purple-500 to-pink-500', emoji: '😲' },
+            { name: 'fearful', gradient: 'from-indigo-500 to-blue-500', emoji: '😰' },
+            { name: 'disgusted', gradient: 'from-yellow-500 to-orange-600', emoji: '🤢' }
+        ];
+
+        const feelings = [
+            { label: 'Excellent', value: 'excellent' },
+            { label: 'Good', value: 'good' },
+            { label: 'Neutral', value: 'neutral' },
+            { label: 'Struggling', value: 'struggling' },
+            { label: 'Critical', value: 'critical' }
+        ];
+
+        const voicePrompts = [
+            "How has your day been so far?",
+            "What's one thing that happened today?",
+            "How are you feeling right now?",
+            "Tell us about your mood today.",
+            "What's on your mind?"
+        ];
+
+        // Load models
+        window.addEventListener('load', async function () {
+            try {
+                showMessage('Loading AI models...', 'info');
+
+                try {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+                    await faceapi.nets.faceExpressionNet.loadFromUri('./models');
+                    console.log('✅ Models loaded from local folder!');
+                } catch (localError) {
+                    console.log('⚠️ Local models failed, loading from CDN...');
+                    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                    console.log('✅ Models loaded from CDN!');
+                }
+
+                modelsLoaded = true;
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('startButtonText').textContent = 'Start my scan';  
+                document.getElementById('statusMessage').textContent = 'SmartPass_v5_PROTO';
+                hideMessage();
+
+            } catch (err) {
+                console.error('❌ Error loading models:', err);
+                showMessage('Failed to load AI models.', 'error');
+            }
+        });
+
+        async function startAnalysis() {
+            if (!modelsLoaded) {
+                showMessage('AI models are still loading...', 'error');
+                return;
+            }
+
+            try {
+                hideMessage();
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720, facingMode: 'user' },
+                    audio: true
+                });
+
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+
+                document.getElementById('initialState').classList.add('hidden');
+                document.getElementById('facialPhase').classList.remove('hidden');
+
+                startFacialAnalysis();
+            } catch (err) {
+                console.error('❌ Media error:', err);
+                showMessage('Unable to access camera/microphone. Please grant permissions.', 'error');
+            }
+        }
+
+        async function startFacialAnalysis() {
+            const video = document.getElementById('video');
+            const detections = [];
+            let progress = 0;
+            const totalFrames = 75; // 15 seconds at 5fps
+            let frameCount = 0;
+
+            console.log('🔍 Starting extended facial analysis...');
+
+            const detectInterval = setInterval(async function () {
+                try {
+                    const detection = await faceapi
+                        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({
+                            inputSize: 224,
+                            scoreThreshold: 0.5
+                        }))
+                        .withFaceExpressions();
+
+                    if (detection && detection.expressions) {
+                        detections.push(detection.expressions);
+                        document.getElementById('faceDetected').className = 'w-2 h-2 rounded-full bg-green-500';
+
+                        frameCount++;
+                        document.getElementById('detectionCount').textContent = frameCount + ' frames';
+                    }
+                } catch (err) {
+                    console.log('Detection skipped');
+                }
+
+                progress += (100 / totalFrames);
+                const progressCircle = document.getElementById('progressCircle');
+                const offset = 283 - (283 * progress / 100);
+                progressCircle.style.strokeDashoffset = offset;
+                document.getElementById('progressText').textContent = Math.min(Math.round(progress), 100);
+
+                if (progress >= 100) {
+                    clearInterval(detectInterval);
+
+                    if (detections.length < 5) {
+                        showMessage('Limited face detection. Please ensure good lighting and try again.', 'error');
+                        stopCamera();
+                        return;
+                    }
+
+                    console.log(`✅ Captured ${detections.length} micro-expressions`);
+                    processFacialAnalysis(detections);
+                }
+            }, 200);
+        }
+
+        function processFacialAnalysis(detections) {
+            const emotionSums = {};
+
+            detections.forEach(function (detection) {
+                Object.keys(detection).forEach(function (emotion) {
+                    emotionSums[emotion] = (emotionSums[emotion] || 0) + detection[emotion];
+                });
+            });
+
+            const avgEmotions = {};
+            Object.keys(emotionSums).forEach(function (emotion) {
+                avgEmotions[emotion] = emotionSums[emotion] / detections.length;
+            });
+
+            let maxEmotion = 'neutral';
+            let maxValue = 0;
+            Object.keys(avgEmotions).forEach(function (emotion) {
+                if (avgEmotions[emotion] > maxValue) {
+                    maxValue = avgEmotions[emotion];
+                    maxEmotion = emotion;
+                }
+            });
+
+            const emotion = emotions.find(e => e.name === maxEmotion) || emotions[2];
+
+            facialResult = {
+                emotion: maxEmotion,
+                confidence: maxValue,
+                emoji: emotion.emoji,
+                gradient: emotion.gradient,
+                microExpressions: avgEmotions,
+                frameCount: detections.length
+            };
+
+            console.log('🎭 Facial result:', facialResult);
+
+            // Transition to voice phase
+            setTimeout(() => {
+                document.getElementById('facialPhase').classList.add('hidden');
+                document.getElementById('voicePhase').classList.remove('hidden');
+
+                // Set random prompt
+                const prompt = voicePrompts[Math.floor(Math.random() * voicePrompts.length)];
+                document.getElementById('voicePrompt').textContent = prompt;
+            }, 1000);
+        }
+
+        function skipToVoice() {
+            facialResult = { emotion: 'neutral', confidence: 0.5, emoji: '😐', gradient: 'from-gray-500 to-slate-500' };
+            document.getElementById('facialPhase').classList.add('hidden');
+            document.getElementById('voicePhase').classList.remove('hidden');
+            const prompt = voicePrompts[Math.floor(Math.random() * voicePrompts.length)];
+            document.getElementById('voicePrompt').textContent = prompt;
+        }
+
+        async function startRecording() {
+            try {
+                document.getElementById('recordButton').classList.add('hidden');
+                document.getElementById('recordingStatus').classList.remove('hidden');
+
+                // Initialize waveform
+                const waveform = document.getElementById('waveform');
+                for (let i = 0; i < 20; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'waveform-bar';
+                    bar.style.height = '8px';
+                    waveform.appendChild(bar);
+                }
+
+                audioChunks = [];
+                recordingStartTime = Date.now();
+
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = function (e) {
+                    audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = function () {
+                    processVoiceAnalysis();
+                };
+
+                mediaRecorder.start();
+
+                // Animate waveform
+                const waveInterval = setInterval(() => {
+                    const bars = waveform.querySelectorAll('.waveform-bar');
+                    bars.forEach(bar => {
+                        const height = Math.random() * 30 + 10;
+                        bar.style.height = height + 'px';
+                    });
+                }, 100);
+
+                // Update timer
+                recordingInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    const mins = Math.floor(elapsed / 60);
+                    const secs = elapsed % 60;
+                    document.getElementById('recordingTime').textContent =
+                        mins + ':' + (secs < 10 ? '0' : '') + secs;
+                }, 100);
+
+                // Auto-stop after 10 seconds
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        clearInterval(recordingInterval);
+                        clearInterval(waveInterval);
+                    }
+                }, 10000);
+
+            } catch (err) {
+                console.error('❌ Recording error:', err);
+                showMessage('Unable to record audio.', 'error');
+            }
+        }
+
+        async function processVoiceAnalysis() {
+                try {
+                    // Show processing message
+                    showMessage('Analyzing voice patterns...', 'info');
+
+                    // Create audio blob
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+                    // Send to Python API
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+
+                    const response = await fetch('http://localhost:5001/api/analyze-voice', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('API request failed: ' + response.status);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        voiceResult = {
+                            emotion: result.emotion,
+                            confidence: result.confidence,
+                            duration: (Date.now() - recordingStartTime) / 1000,
+                            analysis: result.analysis,
+                            features: result.features
+                        };
+
+                        console.log('🎤 Real voice result:', voiceResult);
+                        console.log('📊 Audio features:', result.features);
+                    } else {
+                        throw new Error('Analysis failed: ' + (result.error || 'Unknown error'));
+                    }
+
+                    hideMessage();
+                    stopCamera();
+                    showAnalysisPhase();
+
+                } catch (error) {
+                    console.error('Voice API error:', error);
+                    showMessage('Voice API unavailable - using fallback analysis', 'error');
+
+                    // Fallback to simulation if API fails
+                    voiceResult = {
+                        emotion: 'neutral',
+                        confidence: 0.5,
+                        duration: (Date.now() - recordingStartTime) / 1000,
+                        analysis: 'Voice analysis unavailable. Using fallback mode.'
+                    };
+
+                    setTimeout(() => {
+                        hideMessage();
+                        stopCamera();
+                        showAnalysisPhase();
+                    }, 2000);
+                }
+            }
+
+        function generateVoiceAnalysis(emotion, confidence) {
+            const analyses = {
+                calm: 'Voice patterns indicate stable emotional state with steady tone.',
+                stressed: 'Vocal markers suggest elevated stress levels. Voice shows tension.',
+                energetic: 'Enthusiastic tone detected with high engagement levels.',
+                tired: 'Voice energy appears low. May indicate fatigue or exhaustion.',
+                anxious: 'Voice tremors and hesitation detected. Possible anxiety markers.',
+                content: 'Voice tone suggests satisfaction and emotional wellbeing.'
+            };
+            return analyses[emotion] || 'Voice analysis complete.';
+        }
+
+        function skipVoice() {
+            voiceResult = { emotion: 'neutral', confidence: 0.5, analysis: 'Voice analysis skipped.' };
+            stopCamera();
+            showAnalysisPhase();
+        }
+
+        function showAnalysisPhase() {
+            document.getElementById('voicePhase').classList.add('hidden');
+            document.getElementById('analysisPhase').classList.remove('hidden');
+
+            setTimeout(() => {
+                showResults();
+            }, 2000);
+        }
+
+        function showResults() {
+            // Update facial card
+            const facialEmoji = facialResult.emoji;
+            const facialEmotion = facialResult.emotion;
+            const facialConf = (facialResult.confidence * 100).toFixed(0);
+
+            document.getElementById('facialEmoji').textContent = facialEmoji;
+            document.getElementById('facialEmotion').textContent = facialEmotion;
+            document.getElementById('facialConfidence').textContent = facialConf + '%';
+            document.getElementById('facialConfidenceBar').style.width = facialConf + '%';
+            document.getElementById('facialNotes').textContent =
+                `Analyzed ${facialResult.frameCount || 0} micro-expressions over 15 seconds.`;
+
+            // Update voice card
+            const voiceConf = (voiceResult.confidence * 100).toFixed(0);
+            document.getElementById('voiceEmotion').textContent = voiceResult.emotion;
+            document.getElementById('voiceConfidence').textContent = voiceConf + '%';
+            document.getElementById('voiceConfidenceBar').style.width = voiceConf + '%';
+            document.getElementById('voiceNotes').textContent = voiceResult.analysis;
+
+            // Calculate consistency
+            const consistency = calculateConsistency(facialResult, voiceResult);
+
+            const emotion = emotions.find(e => e.name === facialResult.emotion) || emotions[2];
+            document.getElementById('overallGradient').className =
+                'absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ' + emotion.gradient;
+
+            if (consistency > 0.7) {
+                document.getElementById('overallStatus').textContent = 'High Confidence Assessment';
+                document.getElementById('consistencyText').textContent = 'Consistent ✓';
+                document.getElementById('consistencyIndicator').className =
+                    'glass-card rounded-xl p-4 border border-green-500 border-opacity-30';
+                document.getElementById('overallSummary').textContent =
+                    `Both facial and voice analysis align, indicating authentic ${facialResult.emotion} emotional state. ` +
+                    `Your expressions and vocal patterns show consistency.`;
+            } else {
+                document.getElementById('overallStatus').textContent = 'Mixed Indicators Detected';
+                document.getElementById('consistencyText').textContent = 'Varied';
+                document.getElementById('consistencyIndicator').className =
+                    'glass-card rounded-xl p-4 border border-yellow-500 border-opacity-30';
+                document.getElementById('overallSummary').textContent =
+                    `Your facial expressions (${facialResult.emotion}) and voice patterns (${voiceResult.emotion}) ` +
+                    `show different indicators. This could suggest emotional complexity or masking. ` +
+                    `We recommend speaking with a counselor if you'd like support.`;
+            }
+
+            renderFeelings();
+
+            document.getElementById('analysisPhase').classList.add('hidden');
+            document.getElementById('resultState').classList.remove('hidden');
+        }
+
+        function calculateConsistency(facial, voice) {
+            // Simple consistency check (in production, use more sophisticated ML)
+            const emotionMap = {
+                happy: ['content', 'energetic', 'calm'],
+                sad: ['tired', 'stressed', 'anxious'],
+                neutral: ['calm', 'neutral'],
+                angry: ['stressed', 'anxious'],
+                surprised: ['energetic'],
+                fearful: ['anxious', 'stressed']
+            };
+
+            const matchingVoices = emotionMap[facial.emotion] || [];
+            return matchingVoices.includes(voice.emotion) ? 0.85 : 0.45;
+        }
+
+        function renderFeelings() {
+            const grid = document.getElementById('feelingsGrid');
+            grid.innerHTML = feelings.map(function (feeling) {
+                return `
+                    <button onclick="selectFeeling('${feeling.value}')" id="feeling-${feeling.value}" class="feeling-card rounded-2xl p-5">
+                        <div class="text-xs text-gray-400 font-medium">${feeling.label}</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectFeeling(value) {
+            selectedFeeling = value;
+
+            feelings.forEach(function (f) {
+                const btn = document.getElementById('feeling-' + f.value);
+                if (f.value === value) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+
+            const submitBtn = document.getElementById('submitButton');
+            submitBtn.disabled = false;
+            submitBtn.className = 'flex-1 py-5 rounded-2xl font-semibold text-lg transition-all neuro-button text-white glow';
+
+            const counselorBtn = document.getElementById('counselorButton');
+            if (value === 'struggling' || value === 'critical') {
+                counselorBtn.style.display = 'flex';
+            } else {
+                counselorBtn.style.display = 'none';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(function (track) {
+                    track.stop();
+                });
+                stream = null;
+            }
+        }
+
+        function handleSubmit() {
+            if (!selectedFeeling) {
+                showMessage('Please validate your emotional state.', 'error');
+                return;
+            }
+
+            const notes = document.getElementById('notesInput').value;
+            const consistency = calculateConsistency(facialResult, voiceResult);
+
+            const wellnessData = {
+                timestamp: new Date().toISOString(),
+                facialAnalysis: facialResult,
+                voiceAnalysis: voiceResult,
+                consistency: consistency,
+                userFeeling: selectedFeeling,
+                notes: notes,
+                needsCounseling: selectedFeeling === 'struggling' || selectedFeeling === 'critical'
+            };
+
+            console.log('✅ Enhanced wellness check:', wellnessData);
+
+            document.getElementById('resultState').classList.add('hidden');
+            document.getElementById('successState').classList.remove('hidden');
+
+            setTimeout(function () {
+                resetForm();
+            }, 3000);
+        }
+
+        function handleScheduleCounselor() {
+            alert('Counselor scheduling initiated...\n\n[In production: redirects to booking system]');
+        }
+
+        function resetForm() {
+            stopCamera();
+            selectedFeeling = '';
+            facialResult = null;
+            voiceResult = null;
+            document.getElementById('notesInput').value = '';
+
+            document.getElementById('resultState').classList.add('hidden');
+            document.getElementById('successState').classList.add('hidden');
+            document.getElementById('voicePhase').classList.add('hidden');
+            document.getElementById('facialPhase').classList.add('hidden');
+            document.getElementById('analysisPhase').classList.add('hidden');
+            document.getElementById('initialState').classList.remove('hidden');
+
+            // Reset progress
+            document.getElementById('progressCircle').style.strokeDashoffset = 283;
+            document.getElementById('progressText').textContent = '0';
+            document.getElementById('faceDetected').className = 'w-2 h-2 rounded-full bg-gray-600';
+            document.getElementById('detectionCount').textContent = '0 frames';
+
+            // Reset recording UI
+            document.getElementById('recordButton').classList.remove('hidden');
+            document.getElementById('recordingStatus').classList.add('hidden');
+            document.getElementById('waveform').innerHTML = '';
+
+            hideMessage();
+        }
+
+        function showMessage(text, type) {
+            const box = document.getElementById('messageBox');
+            const textEl = document.getElementById('messageText');
+            textEl.textContent = text;
+
+            if (type === 'error') {
+                box.className = 'glass-card rounded-2xl p-4 mb-6 border border-red-500';
+                textEl.className = 'text-sm text-red-300';
+            } else {
+                box.className = 'glass-card rounded-2xl p-4 mb-6 border border-blue-500';
+                textEl.className = 'text-sm text-blue-300';
+            }
+
+            box.classList.remove('hidden');
+        }
+
+        function hideMessage() {
+            document.getElementById('messageBox').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

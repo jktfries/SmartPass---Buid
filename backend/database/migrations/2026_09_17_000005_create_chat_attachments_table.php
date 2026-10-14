@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('chat_attachments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('message_id')->constrained('chat_messages')->cascadeOnDelete();
+            $table->string('original_name', 255);
+            $table->string('stored_path', 255); // relative to storage/app/public
+            $table->string('mime_type', 100);
+            $table->unsignedBigInteger('file_size'); // bytes
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index('message_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('chat_attachments');
+    }
+};

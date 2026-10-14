@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    /* White canvas: blocks are separated by shadow + whitespace, not borders,
+       so --sp-bg and --sp-surface are intentionally the same colour. */
+    --sp-bg: #ffffff;
+    --sp-surface: #ffffff;
+    --sp-border: #e9edf2;
+    --sp-text: #14212e;
+    --sp-text-muted: #6b7a8c;
+    --sp-primary: #0d9488;
+    --sp-primary-hover: #0f766e;
+    --sp-primary-soft-bg: #f0fdfa;
+    --sp-primary-soft-text: #0f766e;
+    /* Foreground for anything sitting ON --sp-primary. White for every preset;
+       ThemeContext flips it to dark when a custom accent is too light to carry
+       white text. Kept as a token so the flip is one write, not 25 edits. */
+    --sp-on-primary: #ffffff;
+    --sp-success: #10b981;
+    --sp-warning: #f59e0b;
+    --sp-danger: #ef4444;
+    color-scheme: light dark;
+
+    /* Tinted fill for sub-blocks / KPI tiles — replaces the old bordered tiles. */
+    --sp-subtle: #f6f8fa;
+
+    --sp-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+    --sp-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+    --sp-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+    /* The block separator on a white canvas: wide, soft, barely there. */
+    --sp-shadow-soft: 0 2px 4px -2px rgb(16 32 48 / 0.05), 0 12px 32px -8px rgb(16 32 48 / 0.10);
+
+    --sp-font-body: 'Work Sans', system-ui, sans-serif;
+
+    /* Deliberately offset from --sp-surface in both modes — a hover highlight that
+       matches the surface it's sitting on is invisible. (--sp-surface dark is the
+       exact same hex as Tailwind slate-800, which is why dark:hover:bg-slate-800
+       silently disappeared everywhere it was used.) */
+    --sp-hover-bg: #f1f5f9;
+
+    /* Squircle radius scale — curvature stays proportional across sizes. */
+    --sp-r-sm: 0.75rem;
+    --sp-r-md: 1rem;
+    --sp-r-lg: 1.25rem;
+    --sp-r-xl: 1.75rem;
+  }
+
+  .dark {
+    --sp-bg: #0b1220;
+    --sp-surface: #141d2e;
+    --sp-border: #243044;
+    --sp-text: #f1f5f9;
+    --sp-text-muted: #94a3b8;
+
+    --sp-subtle: #1b2537;
+
+    --sp-primary-soft-bg: rgb(15 118 110 / 0.3);
+    --sp-primary-soft-text: #5eead4;
+
+    --sp-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --sp-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --sp-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    /* Shadows barely read on a dark canvas, so blocks lift via a lighter
+       surface instead — this stays subtle and just grounds them. */
+    --sp-shadow-soft: 0 2px 4px -2px rgb(0 0 0 / 0.4), 0 12px 32px -8px rgb(0 0 0 / 0.45);
+
+    --sp-hover-bg: #26334a;
+  }
+
+  /* ── Accent presets ───────────────────────────────────────────────────────
+     Declared AFTER .dark on purpose. The .dark block above overrides
+     --sp-primary-soft-*, so these must be able to win in light mode while the
+     .dark.accent-* pairs win in dark mode. Applying accents as inline styles on
+     <html> instead would beat .dark on specificity and break dark mode. */
+  .accent-indigo  { --sp-primary: #4f46e5; --sp-primary-hover: #4338ca; --sp-primary-soft-bg: #eef2ff; --sp-primary-soft-text: #4338ca; }
+  .accent-violet  { --sp-primary: #7c3aed; --sp-primary-hover: #6d28d9; --sp-primary-soft-bg: #f5f3ff; --sp-primary-soft-text: #6d28d9; }
+  .accent-rose    { --sp-primary: #e11d48; --sp-primary-hover: #be123c; --sp-primary-soft-bg: #fff1f2; --sp-primary-soft-text: #be123c; }
+  .accent-amber   { --sp-primary: #d97706; --sp-primary-hover: #b45309; --sp-primary-soft-bg: #fffbeb; --sp-primary-soft-text: #b45309; }
+  .accent-sky     { --sp-primary: #0284c7; --sp-primary-hover: #0369a1; --sp-primary-soft-bg: #f0f9ff; --sp-primary-soft-text: #0369a1; }
+  .accent-emerald { --sp-primary: #059669; --sp-primary-hover: #047857; --sp-primary-soft-bg: #ecfdf5; --sp-primary-soft-text: #047857; }
+
+  /* ── Custom accent ────────────────────────────────────────────────────────
+     ThemeContext sets only --sp-primary inline (safe: .dark never overrides
+     that one). Everything else is derived here with color-mix, so the values
+     stay in the cascade and the .dark rule below can still win — which is
+     exactly what inline soft-* values would have broken.
+     Scoped to [data-accent="custom"] so the 7 presets keep their hand-tuned
+     colours untouched. */
+  :root[data-accent="custom"] {
+    --sp-primary-hover:     color-mix(in srgb, var(--sp-primary) 85%, black);
+    --sp-primary-soft-bg:   color-mix(in srgb, var(--sp-primary) 8%,  white);
+    /* The ink vars are set inline by ThemeContext with the lightness clamped
+       into a readable band. The color-mix fallback only applies for the blink
+       before React mounts, where the bootstrap script has set --sp-primary but
+       not yet the inks. */
+    --sp-primary-soft-text: var(--sp-accent-ink-light, color-mix(in srgb, var(--sp-primary) 85%, black));
+  }
+  .dark[data-accent="custom"] {
+    --sp-primary-soft-bg:   color-mix(in srgb, var(--sp-primary) 30%, transparent);
+    --sp-primary-soft-text: var(--sp-accent-ink-dark, color-mix(in srgb, var(--sp-primary) 55%, white));
+  }
+
+  .dark.accent-indigo  { --sp-primary-soft-bg: rgb(67 56 202 / 0.3);  --sp-primary-soft-text: #a5b4fc; }
+  .dark.accent-violet  { --sp-primary-soft-bg: rgb(109 40 217 / 0.3); --sp-primary-soft-text: #c4b5fd; }
+  .dark.accent-rose    { --sp-primary-soft-bg: rgb(190 18 60 / 0.3);  --sp-primary-soft-text: #fda4af; }
+  .dark.accent-amber   { --sp-primary-soft-bg: rgb(180 83 9 / 0.3);   --sp-primary-soft-text: #fcd34d; }
+  .dark.accent-sky     { --sp-primary-soft-bg: rgb(3 105 161 / 0.3);  --sp-primary-soft-text: #7dd3fc; }
+  .dark.accent-emerald { --sp-primary-soft-bg: rgb(4 120 87 / 0.3);   --sp-primary-soft-text: #6ee7b7; }
+
+  /* ── Layout density ───────────────────────────────────────────────────────
+     Comfortable is the default; [data-density="compact"] just re-points the
+     same tokens, so every consumer follows automatically. */
+  :root {
+    --sp-card-pad: 1.75rem;       /* Card body (p-7) */
+    --sp-card-pad-sm: 1.5rem;     /* Card body at padding="sm" */
+    --sp-card-head-y: 1.5rem;     /* Card header top padding */
+    --sp-page-pad-x: 2rem;        /* <main> horizontal gutter */
+    --sp-page-pad-b: 2.5rem;      /* <main> bottom gutter */
+    --sp-topbar-pad-t: 1.5rem;
+    --sp-grid-gap: 1.5rem;        /* page rhythm + dashboard grid gaps */
+    --sp-control-h: 2.5rem;       /* .input-field */
+  }
+
+  [data-density="compact"] {
+    --sp-card-pad: 1.125rem;
+    --sp-card-pad-sm: 1rem;
+    --sp-card-head-y: 1rem;
+    --sp-page-pad-x: 1.25rem;
+    --sp-page-pad-b: 1.5rem;
+    --sp-topbar-pad-t: 1rem;
+    --sp-grid-gap: 1rem;
+    --sp-control-h: 2.125rem;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sp-font-body); background: var(--sp-bg); color: var(--sp-text); }
+  #root { min-height: 100svh; }
+}
+
+@layer components {
+  /* ── Squircle shape language ──────────────────────────────────────────────
+     Everything — blocks, icon buttons, avatars, inputs, chart containers —
+     uses a continuous rounded-square form. `corner-shape` (CSS Borders 4) is
+     very new, so the border-radius fallback below is what most browsers will
+     actually render and has to look right on its own. */
+  .sp-squircle    { border-radius: var(--sp-r-lg); }
+  .sp-squircle-sm { border-radius: var(--sp-r-sm); }
+  .sp-squircle-md { border-radius: var(--sp-r-md); }
+  .sp-squircle-lg { border-radius: var(--sp-r-lg); }
+  .sp-squircle-xl { border-radius: var(--sp-r-xl); }
+
+  /* Squircle the whole app, not just elements that opted in. `corner-shape`
+     only does anything where a border-radius already exists, so this is a
+     no-op on square elements and upgrades every rounded one — including
+     `rounded-full` pills and anything a library renders. */
+  @supports (corner-shape: squircle) {
+    *, *::before, *::after { corner-shape: squircle; }
+  }
+
+  /* Icon-rail hover/focus label. Written as plain CSS rather than Tailwind
+     group-* variants because the rail has no visible text — if this silently
+     fails to generate, every destination becomes an unlabelled guess.
+
+     Deliberately :focus-visible and NOT :focus — a mouse click leaves the link
+     focused, so plain :focus keeps the label stuck on screen after navigating
+     until you click somewhere else. :focus-visible only matches keyboard focus,
+     which is exactly who needs the label. */
+  .sp-rail-label { opacity: 0; transition: opacity 0.15s ease; }
+  .group:hover > .sp-rail-label,
+  .group:focus-visible > .sp-rail-label { opacity: 1; }
+
+  /* Page rhythm and grid gaps, driven by the density token so Compact actually
+     compresses the layout rather than only the cards. */
+  .sp-page > * + * { margin-top: var(--sp-grid-gap); }
+  .sp-grid { gap: var(--sp-grid-gap); }
+
+  /* Card padding, token-driven for the same reason. */
+  .sp-card-body      { padding: var(--sp-card-pad); }
+  .sp-card-body-sm   { padding: var(--sp-card-pad-sm); }
+  .sp-card-body.sp-card-has-head,
+  .sp-card-body-sm.sp-card-has-head { padding-top: 0; }
+  .sp-card-head {
+    padding: var(--sp-card-head-y) var(--sp-card-pad) calc(var(--sp-card-head-y) * 0.6);
+  }
+
+  /* A floating content block on the white canvas: no border, soft shadow. */
+  .sp-block {
+    background: var(--sp-surface);
+    border-radius: var(--sp-r-xl);
+    box-shadow: var(--sp-shadow-soft);
+  }
+  @supports (corner-shape: squircle) {
+    .sp-block { corner-shape: squircle; }
+  }
+
+  .input-field {
+    @apply w-full border border-[var(--sp-border)] bg-[var(--sp-subtle)] text-[var(--sp-text)]
+           placeholder-[var(--sp-text-muted)] px-4 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-[var(--sp-primary)] focus:border-transparent
+           transition-colors;
+    border-radius: var(--sp-r-md);
+    height: var(--sp-control-h);
+  }
+  @supports (corner-shape: squircle) {
+    .input-field { corner-shape: squircle; }
+  }
+  textarea.input-field { @apply h-auto; }
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
